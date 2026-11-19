@@ -242,7 +242,7 @@ function authDialog(){
 $("#acct").onclick=async()=>{if(user){await sb.auth.signOut();toast("Signed out");view("browse")}else authDialog()};
 sb.auth.onAuthStateChange((_e,s)=>{
   user=s?.user||null;$("#acct").textContent=user?"Sign out":"Sign in";
-  loadNotes();subscribe();loadItems();
+  setTimeout(()=>{loadNotes();subscribe();loadItems()},0);
 });
 loadItems();
 </script>
