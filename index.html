@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CampusFind – Lost and Found</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Source+Sans+3:wght@400;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<style>
+:root{--bg:#eef2f6;--surface:#fff;--ink:#14213d;--muted:#5b6678;--line:#d3dbe6;--accent:#0f766e;--accent-ink:#fff;--tag:#f4b942;--lost:#c2410c;--found:#0f766e;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1626;--surface:#17233a;--ink:#e8edf5;--muted:#9aa7bd;--line:#2b3a57;--accent:#2dd4bf;--accent-ink:#06201d;--tag:#e0a62f;--lost:#fb923c;--found:#2dd4bf;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Source Sans 3",system-ui,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+h1,h2,h3,.brand{font-family:"Bricolage Grotesque",system-ui,sans-serif;margin:0;letter-spacing:-.01em}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 18px}
+header{background:#14213d;color:#fff}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;padding-bottom:14px;flex-wrap:wrap}
+.brand{font-size:22px;font-weight:800;color:#fff}
+nav{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+nav button{background:none;border:0;color:#cfd8e6;padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600}
+nav button[aria-current=true]{background:#fff;color:#14213d}
+.badge{background:var(--tag);color:#14213d;border-radius:999px;font-size:12px;padding:0 7px;margin-left:6px;font-weight:700}
+.hero{padding:34px 0 18px}
+.hero h1{font-size:clamp(28px,5vw,46px);line-height:1.08;font-weight:800;max-width:16ch}
+.hero p{color:var(--muted);max-width:52ch;margin:10px 0 0}
+.filters{display:grid;grid-template-columns:2fr repeat(4,1fr);gap:10px;margin:18px 0}
+@media(max-width:760px){.filters{grid-template-columns:1fr 1fr}.filters .q{grid-column:1/-1}}
+input,select,textarea{width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{min-height:84px;resize:vertical}
+label{display:block;font-weight:600;font-size:14px;margin-bottom:4px}
+.count{color:var(--muted);margin:0 0 12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px;padding-bottom:40px}
+.card{background:var(--surface);border:1.5px solid var(--line);border-radius:6px 6px 16px 16px;position:relative;display:flex;flex-direction:column;padding-top:20px;overflow:hidden}
+.card::before{content:"";position:absolute;top:7px;left:50%;width:12px;height:12px;margin-left:-6px;border-radius:50%;background:var(--bg);border:1.5px solid var(--line)}
+.ph{height:150px;margin:0 14px;border-radius:8px;background:var(--bg);display:grid;place-items:center;font-size:44px;overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:cover}
+.body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
+.kind{font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px}
+.kind.lost{color:var(--lost)}.kind.found{color:var(--found)}
+.kind::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.card h3{font-size:18px}.meta{color:var(--muted);font-size:14px}
+.btn{background:var(--accent);color:var(--accent-ink);border:0;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+.btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ink)}
+.card .btn{margin-top:auto}.done{font-size:14px;font-weight:600;color:var(--muted);margin-top:auto}
+.panel{background:var(--surface);border:1.5px solid var(--line);border-radius:16px;padding:22px;max-width:660px;margin:26px 0 40px}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:999px;padding:3px;margin:12px 0 16px}
+.seg button{border:0;background:none;padding:7px 18px;border-radius:999px;font-weight:700;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+@media(max-width:560px){.row{grid-template-columns:1fr}}
+.f{margin-bottom:12px}
+.verify{border:1.5px dashed var(--tag);border-radius:12px;padding:14px;margin-bottom:14px}
+.verify p{margin:0 0 10px;color:var(--muted);font-size:14px}
+.note{background:var(--surface);border:1.5px solid var(--line);border-left:5px solid var(--tag);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.empty{padding:34px 0;color:var(--muted)}
+dialog{border:0;border-radius:16px;padding:22px;max-width:440px;width:calc(100% - 32px);background:var(--surface);color:var(--ink)}
+dialog::backdrop{background:rgba(10,16,30,.6)}
+.msg{margin:10px 0 0;font-weight:600}.msg.bad{color:var(--lost)}.msg.ok{color:var(--found)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:999px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+#toast.on{opacity:1}[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="brand">CampusFind</div>
+  <nav aria-label="Main">
+    <button data-v="browse" aria-current="true">Browse</button>
+    <button data-v="report">Report an item</button>
+    <button data-v="alerts">Alerts<span class="badge" id="bd" hidden>0</span></button>
+    <button id="acct">Sign in</button>
+  </nav>
+</div></header>
+
+<main class="wrap">
+<section id="browse">
+  <div class="hero"><h1>Lost something on campus? Someone may have it.</h1>
+  <p>Search items that students have handed in, or report what you lost. We alert you when a report looks like a match.</p></div>
+  <div class="filters" role="search">
+    <div class="q"><label for="fq">Search</label><input id="fq" type="search" placeholder="Blue bottle, calculator, keys"></div>
+    <div><label for="ft">Type</label><select id="ft"><option value="">Lost and found</option><option value="lost">Lost</option><option value="found">Found</option></select></div>
+    <div><label for="fc">Category</label><select id="fc"></select></div>
+    <div><label for="fl">Location</label><select id="fl"></select></div>
+    <div><label for="fd">Date</label><select id="fd"><option value="">Any time</option><option value="1">Last 24 hours</option><option value="7">Last 7 days</option><option value="30">Last 30 days</option></select></div>
+  </div>
+  <p class="count" id="cnt" aria-live="polite"></p>
+  <div class="grid" id="grid"></div>
+</section>
+
+<section id="report" hidden><div class="panel">
+  <h2>Report an item</h2>
+  <div class="seg" role="group" aria-label="Report type">
+    <button type="button" data-t="lost" aria-pressed="true">I lost something</button>
+    <button type="button" data-t="found" aria-pressed="false">I found something</button>
+  </div>
+  <form id="form" onsubmit="return false">
+    <div class="f"><label for="rt">Item name</label><input id="rt" required maxlength="60"></div>
+    <div class="f"><label for="rd">Description</label><textarea id="rd" required maxlength="300" placeholder="Colour, brand, stickers, scratches"></textarea></div>
+    <div class="row"><div><label for="rc">Category</label><select id="rc"></select></div><div><label for="rl">Location</label><select id="rl"></select></div></div>
+    <div class="row"><div><label for="rdt">Date</label><input id="rdt" type="date" required></div><div><label for="rp">Photo</label><input id="rp" type="file" accept="image/*"></div></div>
+    <div class="f"><label for="rn">Your contact (phone or email)</label><input id="rn" required maxlength="80"></div>
+    <div class="verify" id="vbox" hidden>
+      <p>Ask one question only the real owner could answer. Your contact is shown only after someone answers correctly. The answer is stored hashed on the server.</p>
+      <div class="f"><label for="rq">Verification question</label><input id="rq" maxlength="100"></div>
+      <div><label for="ra">Correct answer</label><input id="ra" maxlength="60"></div>
+    </div>
+    <button class="btn" id="submit">Post report</button>
+  </form>
+</div></section>
+
+<section id="alerts" hidden>
+  <div class="hero"><h2 style="font-size:30px">Alerts</h2><p>Matches appear here when a new report shares a category and a location or keyword with your items.</p></div>
+  <div id="nl" style="max-width:700px;padding-bottom:40px"></div>
+</section>
+</main>
+
+<dialog id="dlg"><h3 id="dt"></h3><p class="meta" id="dm"></p><div id="dbody"></div>
+  <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end"><button class="btn ghost" id="dx">Close</button><button class="btn" id="dgo"></button></div>
+</dialog>
+<div id="toast" role="status"></div>
+
+<script>
+/* ===== SETTINGS: paste your Supabase values ===== */
+const SB_URL="https://fwoqihtkirdxpmullcbo.supabase.co/";
+const SB_KEY="sb_publishable_71kERD9HIwRYUYbgjKg9ow_Ws0Jfq-i";
+const DOMAIN="dvcoe.com";
+/* ================================================= */
+const sb=supabase.createClient(SB_URL,SB_KEY);
+const CATS=["Electronics","Bags","Keys and cards","Clothing","Bottles and lunch","Books and stationery","Other"];
+const ICON={"Electronics":"🎧","Bags":"🎒","Keys and cards":"🔑","Clothing":"🧥","Bottles and lunch":"🥤","Books and stationery":"📚","Other":"📦"};
+const LOCS=["Library","Main canteen","Engineering block","Sports complex","Hostel A","Auditorium","Bus stop"];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const iso=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.toISOString().slice(0,10)};
+let user=null,items=[],notes=[],rtype="lost",chan=null,goFn=null,cur=null;
+
+function toast(t){const e=$("#toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>e.classList.remove("on"),3000)}
+function opts(sel,list,all){sel.innerHTML=(all?`<option value="">${all}</option>`:"")+list.map(x=>`<option>${x}</option>`).join("")}
+opts($("#fc"),CATS,"All categories");opts($("#fl"),LOCS,"All locations");opts($("#rc"),CATS);opts($("#rl"),LOCS);
+$("#rdt").value=iso(0);$("#rdt").max=iso(0);
+
+function view(v){
+  if(v!=="browse"&&!user){authDialog();return}
+  ["browse","report","alerts"].forEach(x=>$("#"+x).hidden=x!==v);
+  document.querySelectorAll("nav button[data-v]").forEach(b=>b.setAttribute("aria-current",b.dataset.v===v));
+  if(v==="alerts"){renderNotes();markSeen()}window.scrollTo(0,0);
+}
+document.querySelectorAll("nav button[data-v]").forEach(b=>b.onclick=()=>view(b.dataset.v));
+
+function fmt(d){const n=Math.round((new Date(iso(0))-new Date(d))/864e5);return n<=0?"today":n===1?"yesterday":new Date(d).toLocaleDateString(undefined,{day:"numeric",month:"short"})}
+async function loadItems(){
+  const {data,error}=await sb.from("items").select("*").order("created_at",{ascending:false});
+  if(error){$("#grid").innerHTML=`<p class="empty">Could not load items. Check your Supabase URL and key.</p>`;return}
+  items=data;renderGrid();
+}
+function renderGrid(){
+  const q=$("#fq").value.toLowerCase().trim(),t=$("#ft").value,c=$("#fc").value,l=$("#fl").value,d=+$("#fd").value,cut=d?iso(d):"";
+  const list=items.filter(i=>(!t||i.type===t)&&(!c||i.cat===c)&&(!l||i.loc===l)&&(!cut||i.date>=cut)&&(!q||(i.title+" "+i.descr).toLowerCase().includes(q)));
+  $("#cnt").textContent=list.length+(list.length===1?" item":" items");
+  $("#grid").innerHTML=list.length?list.map(card).join(""):`<p class="empty">No items match these filters. Clear a filter, or report the item so we can alert you if it turns up.</p>`;
+}
+function card(i){
+  const mine=user&&i.owner===user.id;
+  const ph=i.photo_url?`<img src="${esc(i.photo_url)}" alt="Photo of ${esc(i.title)}" loading="lazy">`:`<span aria-hidden="true">${ICON[i.cat]||"📦"}</span>`;
+  const act=i.status==="claimed"?`<span class="done">Returned to owner</span>`:mine?`<span class="done">Your report</span>`:
+    i.type==="found"?`<button class="btn" data-claim="${i.id}">This is mine</button>`:`<button class="btn ghost" data-saw="${i.id}">I found this</button>`;
+  return `<article class="card"><div class="ph">${ph}</div><div class="body"><span class="kind ${i.type}">${i.type==="lost"?"Lost":"Found"}</span><h3>${esc(i.title)}</h3>
+  <div class="meta">${esc(i.loc)}, ${fmt(i.date)} · ${esc(i.cat)}</div><div>${esc(i.descr)}</div>${act}</div></article>`;
+}
+["fq","ft","fc","fl","fd"].forEach(id=>$("#"+id).addEventListener("input",renderGrid));
+
+function dialog(title,meta,body,goText,fn){
+  $("#dt").textContent=title;$("#dm").textContent=meta;$("#dbody").innerHTML=body;
+  $("#dgo").textContent=goText;$("#dgo").hidden=!goText;goFn=fn;$("#dlg").showModal();
+}
+$("#dx").onclick=()=>$("#dlg").close();
+$("#dgo").onclick=()=>goFn&&goFn();
+const setMsg=(t,c)=>{const m=$("#dm2");if(m){m.className="msg "+c;m.textContent=t}};
+
+$("#grid").onclick=async e=>{
+  const c=e.target.closest("[data-claim]"),s=e.target.closest("[data-saw]");
+  if((c||s)&&!user){authDialog();return}
+  if(c){cur=items.find(x=>x.id===c.dataset.claim);
+    dialog(cur.title,`Found at ${cur.loc}, ${fmt(cur.date)}`,`<p>Answer the finder’s question to confirm this is yours. You get 3 tries.</p><label for="ans">${esc(cur.question)}</label><input id="ans" autocomplete="off"><p class="msg" id="dm2" aria-live="polite"></p>`,"Verify and claim",claim)}
+  if(s){const it=items.find(x=>x.id===s.dataset.saw),ct=prompt("How can the owner reach you? (phone or email)");if(!ct)return;
+    const {error}=await sb.rpc("report_sighting",{p_item:it.id,p_contact:ct});toast(error?error.message:"Owner notified")}
+};
+async function claim(){
+  const a=$("#ans").value.trim();if(!a)return;
+  const {data,error}=await sb.rpc("claim_item",{p_item:cur.id,p_answer:a});
+  if(error)return setMsg(error.message,"bad");
+  if(data.ok){$("#dbody").innerHTML=`<p class="msg ok">Verified. Contact the finder: ${esc(data.contact)}</p><p class="meta">You can also hand over the item at the security office with your student ID.</p>`;$("#dgo").hidden=true;loadItems()}
+  else if(data.locked)$("#dbody").innerHTML=`<p class="msg bad">Too many wrong answers. Bring your student ID to the security office.</p>`,$("#dgo").hidden=true;
+  else if(data.msg)setMsg(data.msg,"bad");
+  else setMsg(`That answer doesn’t match. ${data.left} ${data.left===1?"try":"tries"} left.`,"bad");
+}
+
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{
+  rtype=b.dataset.t;document.querySelectorAll(".seg button").forEach(x=>x.setAttribute("aria-pressed",x===b));$("#vbox").hidden=rtype!=="found"});
+function resize(f){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{
+  const k=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*k;c.height=im.height*k;
+  c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(res,"image/jpeg",.75)};im.src=r.result};r.readAsDataURL(f)})}
+$("#form").addEventListener("submit",async()=>{
+  if(!$("#form").reportValidity())return;
+  if(rtype==="found"&&(!$("#rq").value.trim()||!$("#ra").value.trim()))return toast("Add a verification question and answer");
+  const btn=$("#submit");btn.disabled=true;btn.textContent="Posting…";
+  try{
+    let url=null;const f=$("#rp").files[0];
+    if(f){const blob=await resize(f),path=`${user.id}/${Date.now()}.jpg`;
+      const up=await sb.storage.from("item-photos").upload(path,blob,{contentType:"image/jpeg"});
+      if(up.error)throw up.error;url=sb.storage.from("item-photos").getPublicUrl(path).data.publicUrl}
+    const {error}=await sb.rpc("post_item",{p_type:rtype,p_title:$("#rt").value.trim(),p_descr:$("#rd").value.trim(),p_cat:$("#rc").value,p_loc:$("#rl").value,p_date:$("#rdt").value,p_photo:url,p_question:$("#rq").value.trim(),p_answer:$("#ra").value.trim(),p_contact:$("#rn").value.trim()});
+    if(error)throw error;
+    $("#form").reset();$("#rdt").value=iso(0);toast("Report posted");await loadItems();await loadNotes();view("browse");
+  }catch(e){toast(e.message||"Something went wrong")}
+  btn.disabled=false;btn.textContent="Post report";
+});
+
+async function loadNotes(){
+  if(!user){notes=[];badge();return}
+  const {data}=await sb.from("notifications").select("*").order("created_at",{ascending:false});notes=data||[];badge();
+}
+function badge(){const n=notes.filter(x=>!x.seen).length;$("#bd").hidden=!n;$("#bd").textContent=n}
+function renderNotes(){$("#nl").innerHTML=notes.length?notes.map(n=>`<div class="note">${esc(n.body)}<div class="meta">${new Date(n.created_at).toLocaleString()}</div></div>`).join(""):`<p class="empty">No alerts yet. Report a lost item and we’ll tell you when a match is found.</p>`}
+async function markSeen(){if(!notes.some(n=>!n.seen))return;await sb.from("notifications").update({seen:true}).eq("seen",false);notes.forEach(n=>n.seen=true);badge()}
+function subscribe(){
+  if(chan){sb.removeChannel(chan);chan=null}if(!user)return;
+  chan=sb.channel("alerts").on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:"user_id=eq."+user.id},p=>{notes.unshift(p.new);badge();toast("New alert: possible match")}).subscribe();
+}
+
+function authDialog(){
+  dialog("Sign in to CampusFind",`Use your @${DOMAIN} email`,`<div class="f"><label for="em">College email</label><input id="em" type="email" autocomplete="email"></div><div class="f"><label for="pw">Password</label><input id="pw" type="password" minlength="6" autocomplete="current-password"></div><button class="btn ghost" id="su" type="button">Create account</button><p class="msg" id="dm2" aria-live="polite"></p>`,"Sign in",async()=>{
+    const {error}=await sb.auth.signInWithPassword({email:$("#em").value.trim(),password:$("#pw").value});
+    error?setMsg(error.message,"bad"):$("#dlg").close()});
+  $("#su").onclick=async()=>{
+    const email=$("#em").value.trim().toLowerCase();
+    if(!email.endsWith("@"+DOMAIN))return setMsg(`Use your @${DOMAIN} email address.`,"bad");
+    const {error}=await sb.auth.signUp({email,password:$("#pw").value});
+    error?setMsg(error.message,"bad"):setMsg("Account created. Check your email to confirm, then sign in.","ok")};
+}
+$("#acct").onclick=async()=>{if(user){await sb.auth.signOut();toast("Signed out");view("browse")}else authDialog()};
+sb.auth.onAuthStateChange((_e,s)=>{
+  user=s?.user||null;$("#acct").textContent=user?"Sign out":"Sign in";
+  loadNotes();subscribe();loadItems();
+});
+loadItems();
+</script>
+</body>
+</html>
